@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SIP Calculator | Finwise Tools</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --bg:#0b1220;
+  --card:rgba(255,255,255,0.06);
+  --border:rgba(255,255,255,0.08);
+  --blue:#38bdf8;
+  --teal:#2dd4bf;
+  --orange:#f59e0b;
+  --text:#e5e7eb;
+  --muted:#9ca3af;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'Inter',sans-serif;
+  background:linear-gradient(180deg,#020617,#0b1220);
+  color:var(--text);
+}
+.container{
+  max-width:1200px;
+  margin:auto;
+  padding:40px 20px;
+}
+.title{text-align:center;margin-bottom:40px}
+.title h1{color:var(--blue);font-size:2.4rem}
+.calculator{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:30px;
+}
+.card{
+  background:var(--card);
+  backdrop-filter: blur(14px);
+  border-radius:16px;
+  padding:30px;
+  border:1px solid var(--border);
+  box-shadow:0 20px 40px rgba(0,0,0,0.4);
+}
+.field{margin-bottom:25px}
+label{
+  font-size:0.85rem;
+  color:var(--muted);
+  display:flex;
+  justify-content:space-between;
+}
+.value{color:var(--blue);font-weight:600}
+input[type=number]{
+  width:100%;
+  padding:14px;
+  margin-top:8px;
+  border-radius:12px;
+  background:#020617;
+  border:1px solid var(--border);
+  color:var(--text);
+}
+input[type=range]{
+  width:100%;
+  margin-top:10px;
+  -webkit-appearance:none;
+  height:6px;
+  border-radius:10px;
+  background:linear-gradient(90deg,var(--blue),var(--teal));
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  width:18px;
+  height:18px;
+  background:var(--blue);
+  border-radius:50%;
+  box-shadow:0 0 10px var(--blue);
+  cursor:pointer;
+}
+.result-value{
+  font-size:2.2rem;
+  font-weight:700;
+  color:var(--blue);
+}
+.sub{color:var(--muted);margin-bottom:20px}
+.chart-wrap{max-width:280px;margin:20px auto}
+.legend{
+  display:flex;
+  justify-content:space-between;
+  margin-top:20px;
+  font-size:0.9rem;
+}
+.dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  display:inline-block;
+  margin-right:6px;
+}
+@media(max-width:900px){
+  .calculator{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <div class="title">
+    <h1>SIP Calculator</h1>
+    <p>Plan disciplined investments with precision</p>
+  </div>
+
+  <div class="calculator">
+
+    <!-- INPUT PANEL -->
+    <div class="card">
+      <div class="field">
+        <label>Monthly Investment <span class="value">₹ <span id="sipVal">10000</span></span></label>
+        <input type="number" id="sip" value="10000">
+      </div>
+
+      <div class="field">
+        <label>Duration <span class="value"><span id="yearsVal">15</span> Years</span></label>
+        <input type="range" id="years" min="1" max="40" value="15">
+      </div>
+
+      <div class="field">
+        <label>Step-Up (Annual) <span class="value"><span id="stepVal">10</span>%</span></label>
+        <input type="range" id="step" min="0" max="30" value="10">
+      </div>
+
+      <div class="field">
+        <label>Expected Return <span class="value"><span id="rateVal">12</span>%</span></label>
+        <input type="range" id="rate" min="1" max="20" value="12">
+      </div>
+    </div>
+
+    <!-- OUTPUT PANEL -->
+    <div class="card">
+      <div class="result-value">₹ <span id="final">0</span></div>
+      <div class="sub">Estimated portfolio value</div>
+
+      <div class="chart-wrap">
+        <canvas id="donut"></canvas>
+      </div>
+
+      <div class="legend">
+        <div><span class="dot" style="background:var(--orange)"></span> Invested: ₹ <span id="invested">0</span></div>
+        <div><span class="dot" style="background:var(--blue)"></span> Returns: ₹ <span id="returns">0</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const sip = document.getElementById("sip");
+const years = document.getElementById("years");
+const step = document.getElementById("step");
+const rate = document.getElementById("rate");
+
+const sipVal = document.getElementById("sipVal");
+const yearsVal = document.getElementById("yearsVal");
+const stepVal = document.getElementById("stepVal");
+const rateVal = document.getElementById("rateVal");
+
+let chart;
+
+function calculateSIP(){
+  const monthlySIP = Number(sip.value);
+  const totalYears = Number(years.value);
+  const stepUp = Number(step.value) / 100;
+  const annualRate = Number(rate.value) / 100;
+  const monthlyRate = annualRate / 12;
+
+  sipVal.textContent = monthlySIP;
+  yearsVal.textContent = totalYears;
+  stepVal.textContent = step.value;
+  rateVal.textContent = rate.value;
+
+  let invested = 0;
+  let futureValue = 0;
+
+  for(let year = 1; year <= totalYears; year++){
+    let yearlySIP = monthlySIP * Math.pow(1 + stepUp, year - 1);
+    for(let month = 1; month <= 12; month++){
+      invested += yearlySIP;
+      futureValue = (futureValue + yearlySIP) * (1 + monthlyRate);
+    }
+  }
+
+  document.getElementById("final").textContent =
+    Math.round(futureValue).toLocaleString();
+
+  document.getElementById("invested").textContent =
+    Math.round(invested).toLocaleString();
+
+  document.getElementById("returns").textContent =
+    Math.round(futureValue - invested).toLocaleString();
+
+  if(chart) chart.destroy();
+  chart = new Chart(document.getElementById("donut"),{
+    type:"doughnut",
+    data:{
+      datasets:[{
+        data:[invested, futureValue - invested],
+        backgroundColor:["#f59e0b","#38bdf8"],
+        borderWidth:0
+      }]
+    },
+    options:{
+      cutout:"70%",
+      plugins:{legend:{display:false}},
+      animation:{animateScale:true}
+    }
+  });
+}
+
+[sip, years, step, rate].forEach(el =>
+  el.addEventListener("input", calculateSIP)
+);
+
+calculateSIP();
+</script>
+
+</body>
+</html>

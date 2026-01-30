@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Loan Calculator | Finwise Tools</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Font -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --bg:#0b1220;
+  --card:rgba(255,255,255,0.06);
+  --border:rgba(255,255,255,0.08);
+  --blue:#38bdf8;
+  --teal:#2dd4bf;
+  --orange:#f59e0b;
+  --text:#e5e7eb;
+  --muted:#9ca3af;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'Inter',sans-serif;
+  background:linear-gradient(180deg,#020617,#0b1220);
+  color:var(--text);
+}
+.container{
+  max-width:1200px;
+  margin:auto;
+  padding:40px 20px;
+}
+.title{text-align:center;margin-bottom:40px}
+.title h1{color:var(--blue);font-size:2.4rem}
+.title p{color:var(--muted)}
+
+.card{
+  background:var(--card);
+  backdrop-filter:blur(14px);
+  border-radius:16px;
+  padding:30px;
+  border:1px solid var(--border);
+  box-shadow:0 20px 40px rgba(0,0,0,.4);
+  margin-bottom:30px;
+}
+
+/* INPUTS */
+.grid-3{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:25px;
+}
+.field label{
+  font-size:.85rem;
+  color:var(--muted);
+  display:flex;
+  justify-content:space-between;
+}
+.value{color:var(--blue);font-weight:600}
+input[type=range]{
+  width:100%;
+  margin-top:10px;
+  -webkit-appearance:none;
+  height:6px;
+  border-radius:10px;
+  background:linear-gradient(90deg,var(--blue),var(--teal));
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  width:18px;
+  height:18px;
+  background:var(--blue);
+  border-radius:50%;
+  box-shadow:0 0 10px var(--blue);
+  cursor:pointer;
+}
+.toggle{
+  display:flex;
+  gap:10px;
+  margin-top:10px;
+}
+.toggle button{
+  flex:1;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:#020617;
+  color:var(--muted);
+  cursor:pointer;
+}
+.toggle button.active{
+  background:var(--blue);
+  color:#020617;
+  font-weight:600;
+}
+
+/* COMPARISON */
+.compare{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:30px;
+  position:relative;
+}
+.compare:before{
+  content:'';
+  position:absolute;
+  left:50%;
+  top:0;
+  bottom:0;
+  width:1px;
+  background:var(--border);
+}
+.box h3{margin-top:0;color:var(--blue)}
+.metric{
+  display:flex;
+  justify-content:space-between;
+  margin:10px 0;
+  color:var(--muted);
+}
+.metric span{color:var(--text);font-weight:600}
+
+/* SAVINGS */
+.savings{
+  text-align:center;
+  margin:30px 0;
+}
+.badge{
+  display:inline-block;
+  padding:14px 24px;
+  border-radius:14px;
+  background:linear-gradient(135deg,var(--teal),var(--blue));
+  color:#020617;
+  font-weight:700;
+  box-shadow:0 0 25px rgba(45,212,191,.5);
+}
+
+/* CHARTS */
+.charts{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:30px;
+}
+.chart-card{text-align:center}
+.chart-card h4{color:var(--muted);margin-bottom:10px}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .grid-3,.compare,.charts{grid-template-columns:1fr}
+  .compare:before{display:none}
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <div class="title">
+    <h1>Loan Calculator</h1>
+    <p>Compare Flat vs Reducing Interest Rates</p>
+  </div>
+
+  <!-- INPUTS -->
+  <div class="card grid-3">
+    <div class="field">
+      <label>Loan Amount <span class="value">₹ <span id="amtVal">500000</span></span></label>
+      <input type="range" id="amount" min="50000" max="5000000" value="500000">
+    </div>
+
+    <div class="field">
+      <label>Interest Rate <span class="value"><span id="rateVal">10</span>%</span></label>
+      <input type="range" id="rate" min="1" max="20" value="10">
+    </div>
+
+    <div class="field">
+      <label>Loan Tenure <span class="value"><span id="tenureVal">10</span> <span id="unit">Years</span></span></label>
+      <input type="range" id="tenure" min="1" max="30" value="10">
+      <div class="toggle">
+        <button id="yearsBtn" class="active">Years</button>
+        <button id="monthsBtn">Months</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPARISON -->
+  <div class="card compare">
+    <div class="box">
+      <h3>Flat Interest</h3>
+      <div class="metric">EMI <span>₹ <span id="flatEmi">0</span></span></div>
+      <div class="metric">Total Interest <span>₹ <span id="flatInt">0</span></span></div>
+      <div class="metric">Total Payable <span>₹ <span id="flatTotal">0</span></span></div>
+    </div>
+
+    <div class="box">
+      <h3>Reducing Balance</h3>
+      <div class="metric">EMI <span>₹ <span id="redEmi">0</span></span></div>
+      <div class="metric">Total Interest <span>₹ <span id="redInt">0</span></span></div>
+      <div class="metric">Total Payable <span>₹ <span id="redTotal">0</span></span></div>
+    </div>
+  </div>
+
+  <!-- SAVINGS -->
+  <div class="savings">
+    <div class="badge">You Save ₹ <span id="save">0</span></div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts">
+    <div class="card chart-card">
+      <h4>Flat Interest Breakup</h4>
+      <canvas id="flatChart"></canvas>
+    </div>
+    <div class="card chart-card">
+      <h4>Reducing Balance Breakup</h4>
+      <canvas id="redChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+const amount=document.getElementById("amount");
+const rate=document.getElementById("rate");
+const tenure=document.getElementById("tenure");
+const amtVal=document.getElementById("amtVal");
+const rateVal=document.getElementById("rateVal");
+const tenureVal=document.getElementById("tenureVal");
+const unit=document.getElementById("unit");
+const yearsBtn=document.getElementById("yearsBtn");
+const monthsBtn=document.getElementById("monthsBtn");
+
+let isYears=true,flatC,redC;
+
+function calculate(){
+  let P=+amount.value;
+  let r=+rate.value/100;
+  let n=isYears?tenure.value*12:tenure.value;
+  amtVal.textContent=P.toLocaleString();
+  rateVal.textContent=rate.value;
+  tenureVal.textContent=tenure.value;
+
+  /* Flat */
+  let flatInterest=P*r*(n/12);
+  let flatTotal=P+flatInterest;
+  let flatEmi=flatTotal/n;
+
+  /* Reducing */
+  let m=r/12;
+  let redEmi=(P*m*Math.pow(1+m,n))/(Math.pow(1+m,n)-1);
+  let redTotal=redEmi*n;
+  let redInterest=redTotal-P;
+
+  flatEmiEl.textContent=Math.round(flatEmi).toLocaleString();
+  flatIntEl.textContent=Math.round(flatInterest).toLocaleString();
+  flatTotalEl.textContent=Math.round(flatTotal).toLocaleString();
+
+  redEmiEl.textContent=Math.round(redEmi).toLocaleString();
+  redIntEl.textContent=Math.round(redInterest).toLocaleString();
+  redTotalEl.textContent=Math.round(redTotal).toLocaleString();
+
+  save.textContent=Math.round(flatTotal-redTotal).toLocaleString();
+
+  if(flatC) flatC.destroy();
+  if(redC) redC.destroy();
+
+  flatC=new Chart(flatChart,{
+    type:"doughnut",
+    data:{datasets:[{data:[P,flatInterest],backgroundColor:["#9ca3af","#38bdf8"],borderWidth:0}]},
+    options:{cutout:"70%",plugins:{legend:{display:false}}}
+  });
+  redC=new Chart(redChart,{
+    type:"doughnut",
+    data:{datasets:[{data:[P,redInterest],backgroundColor:["#9ca3af","#38bdf8"],borderWidth:0}]},
+    options:{cutout:"70%",plugins:{legend:{display:false}}}
+  });
+}
+
+const flatEmiEl=document.getElementById("flatEmi");
+const flatIntEl=document.getElementById("flatInt");
+const flatTotalEl=document.getElementById("flatTotal");
+const redEmiEl=document.getElementById("redEmi");
+const redIntEl=document.getElementById("redInt");
+const redTotalEl=document.getElementById("redTotal");
+const save=document.getElementById("save");
+
+[amount,rate,tenure].forEach(el=>el.addEventListener("input",calculate));
+
+yearsBtn.onclick=()=>{isYears=true;unit.textContent="Years";yearsBtn.classList.add("active");monthsBtn.classList.remove("active");calculate();}
+monthsBtn.onclick=()=>{isYears=false;unit.textContent="Months";monthsBtn.classList.add("active");yearsBtn.classList.remove("active");calculate();}
+
+calculate();
+</script>
+
+</body>
+</html>

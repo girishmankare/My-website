@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mutual Fund Calculator | Finwise Tools</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Font -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --bg:#0b1220;
+  --card:rgba(255,255,255,0.06);
+  --border:rgba(255,255,255,0.08);
+  --blue:#38bdf8;
+  --teal:#2dd4bf;
+  --orange:#f59e0b;
+  --text:#e5e7eb;
+  --muted:#9ca3af;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'Inter',sans-serif;
+  background:linear-gradient(180deg,#020617,#0b1220);
+  color:var(--text);
+}
+
+/* Layout */
+.container{
+  max-width:1200px;
+  margin:auto;
+  padding:40px 20px;
+}
+
+.title{
+  text-align:center;
+  margin-bottom:40px;
+}
+.title h1{
+  color:var(--blue);
+  font-size:2.4rem;
+}
+.title p{color:var(--muted)}
+
+.calculator{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:30px;
+}
+
+/* Glass Card */
+.card{
+  background:var(--card);
+  backdrop-filter: blur(14px);
+  border-radius:16px;
+  padding:30px;
+  border:1px solid var(--border);
+  box-shadow:0 20px 40px rgba(0,0,0,0.4);
+}
+
+/* Inputs */
+.field{
+  margin-bottom:25px;
+}
+label{
+  font-size:0.85rem;
+  color:var(--muted);
+  display:flex;
+  justify-content:space-between;
+}
+.value{
+  color:var(--blue);
+  font-weight:600;
+}
+input[type=number]{
+  width:100%;
+  padding:14px;
+  margin-top:8px;
+  border-radius:12px;
+  background:#020617;
+  border:1px solid var(--border);
+  color:var(--text);
+  font-size:1rem;
+}
+
+/* Sliders */
+input[type=range]{
+  width:100%;
+  margin-top:10px;
+  -webkit-appearance:none;
+  height:6px;
+  border-radius:10px;
+  background:linear-gradient(90deg,var(--blue),var(--teal));
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  width:18px;
+  height:18px;
+  background:var(--blue);
+  border-radius:50%;
+  box-shadow:0 0 10px var(--blue);
+  cursor:pointer;
+}
+
+/* Right Panel */
+.result-value{
+  font-size:2.2rem;
+  font-weight:700;
+  color:var(--blue);
+}
+.sub{
+  color:var(--muted);
+  margin-bottom:20px;
+}
+
+.chart-wrap{
+  max-width:280px;
+  margin:20px auto;
+}
+
+.legend{
+  display:flex;
+  justify-content:space-between;
+  margin-top:20px;
+  font-size:0.9rem;
+}
+.dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  display:inline-block;
+  margin-right:6px;
+}
+
+/* CTA */
+.cta{
+  margin-top:25px;
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  background:linear-gradient(135deg,var(--blue),var(--teal));
+  color:#020617;
+  font-weight:700;
+  cursor:pointer;
+  transition:.3s;
+}
+.cta:hover{
+  box-shadow:0 0 25px rgba(56,189,248,.6);
+}
+
+/* Responsive */
+@media(max-width:900px){
+  .calculator{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <div class="title">
+    <h1>Mutual Fund Calculator</h1>
+    <p>Estimate your lump-sum investment growth</p>
+  </div>
+
+  <div class="calculator">
+
+    <!-- LEFT PANEL -->
+    <div class="card">
+      <div class="field">
+        <label>Investment Amount <span class="value">₹ <span id="amtVal">100000</span></span></label>
+        <input type="number" id="amount" value="100000">
+      </div>
+
+      <div class="field">
+        <label>Investment Duration <span class="value"><span id="yrsVal">10</span> Years</span></label>
+        <input type="range" id="years" min="1" max="30" value="10">
+      </div>
+
+      <div class="field">
+        <label>Expected Return <span class="value"><span id="rateVal">12</span>%</span></label>
+        <input type="range" id="rate" min="1" max="20" value="12">
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="card">
+      <div class="result-value">₹ <span id="final">0</span></div>
+      <div class="sub">Estimated portfolio value</div>
+
+      <div class="chart-wrap">
+        <canvas id="donut"></canvas>
+      </div>
+
+      <div class="legend">
+        <div>
+          <span class="dot" style="background:var(--orange)"></span>
+          Invested: ₹ <span id="invested">0</span>
+        </div>
+        <div>
+          <span class="dot" style="background:var(--blue)"></span>
+          Returns: ₹ <span id="returns">0</span>
+        </div>
+      </div>
+
+      <button class="cta">Invest Now</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const amount = document.getElementById("amount");
+const years = document.getElementById("years");
+const rate = document.getElementById("rate");
+
+const amtVal = document.getElementById("amtVal");
+const yrsVal = document.getElementById("yrsVal");
+const rateVal = document.getElementById("rateVal");
+
+let chart;
+
+function calculateMF(){
+  const P = Number(amount.value);
+  const t = Number(years.value);
+  const r = Number(rate.value) / 100;
+
+  amtVal.textContent = P;
+  yrsVal.textContent = t;
+  rateVal.textContent = rate.value;
+
+  const futureValue = P * Math.pow(1 + r, t);
+  const returns = futureValue - P;
+
+  document.getElementById("final").textContent =
+    Math.round(futureValue).toLocaleString();
+
+  document.getElementById("invested").textContent =
+    Math.round(P).toLocaleString();
+
+  document.getElementById("returns").textContent =
+    Math.round(returns).toLocaleString();
+
+  if(chart) chart.destroy();
+  chart = new Chart(donut,{
+    type:"doughnut",
+    data:{
+      datasets:[{
+        data:[P, returns],
+        backgroundColor:["#f59e0b","#38bdf8"],
+        borderWidth:0
+      }]
+    },
+    options:{
+      cutout:"70%",
+      plugins:{legend:{display:false}},
+      animation:{animateScale:true}
+    }
+  });
+}
+
+[amount, years, rate].forEach(el =>
+  el.addEventListener("input", calculateMF)
+);
+
+calculateMF();
+</script>
+
+</body>
+</html>

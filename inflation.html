@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Inflation Calculator | Finwise Tools</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --bg:#0b1220;
+  --card:rgba(255,255,255,0.06);
+  --border:rgba(255,255,255,0.08);
+  --blue:#38bdf8;
+  --teal:#2dd4bf;
+  --orange:#f59e0b;
+  --text:#e5e7eb;
+  --muted:#9ca3af;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'Inter',sans-serif;
+  background:linear-gradient(180deg,#020617,#0b1220);
+  color:var(--text);
+}
+
+.container{
+  max-width:1200px;
+  margin:auto;
+  padding:40px 20px;
+}
+
+h1{
+  text-align:center;
+  color:var(--blue);
+  font-size:2.4rem;
+  margin-bottom:10px;
+}
+.subtitle{
+  text-align:center;
+  color:var(--muted);
+  margin-bottom:40px;
+}
+
+/* Cards */
+.card{
+  background:var(--card);
+  backdrop-filter: blur(14px);
+  border-radius:16px;
+  padding:30px;
+  border:1px solid var(--border);
+  box-shadow:0 20px 40px rgba(0,0,0,0.4);
+  margin-bottom:30px;
+}
+
+/* Inputs */
+.inputs{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:25px;
+}
+.field label{
+  font-size:.85rem;
+  color:var(--muted);
+}
+.field input{
+  width:100%;
+  padding:14px;
+  margin-top:8px;
+  border-radius:12px;
+  background:#020617;
+  border:1px solid var(--border);
+  color:var(--text);
+  font-size:1rem;
+}
+.field input:focus{
+  outline:none;
+  box-shadow:0 0 0 2px rgba(56,189,248,.4);
+}
+
+button{
+  margin-top:25px;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  background:linear-gradient(135deg,var(--blue),var(--teal));
+  color:#020617;
+  font-weight:700;
+  cursor:pointer;
+  transition:.3s;
+}
+button:hover{
+  box-shadow:0 0 25px rgba(56,189,248,.6);
+}
+
+/* Results */
+.results{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:30px;
+}
+.metric h3{
+  font-size:.9rem;
+  color:var(--muted);
+}
+.metric .value{
+  font-size:2rem;
+  font-weight:700;
+  margin-top:8px;
+}
+.loss{
+  color:var(--orange);
+}
+
+/* Charts */
+.charts{
+  display:grid;
+  grid-template-columns:2fr 1fr;
+  gap:30px;
+}
+.chart-card{
+  background:var(--card);
+  border-radius:16px;
+  padding:25px;
+  border:1px solid var(--border);
+}
+
+/* Responsive */
+@media(max-width:900px){
+  .results,.charts{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Inflation Calculator</h1>
+<p class="subtitle">Understand how inflation reduces your purchasing power over time</p>
+
+<!-- INPUTS -->
+<div class="card">
+  <div class="inputs">
+    <div class="field">
+      <label>Present Amount (₹)</label>
+      <input type="number" id="amount" placeholder="e.g. 100000">
+    </div>
+    <div class="field">
+      <label>Inflation Rate (% per annum)</label>
+      <input type="number" id="rate" placeholder="e.g. 6">
+    </div>
+    <div class="field">
+      <label>Time Period (Years)</label>
+      <input type="number" id="years" placeholder="e.g. 10">
+    </div>
+  </div>
+  <button onclick="calculate()">Calculate</button>
+</div>
+
+<!-- RESULTS -->
+<div class="card results">
+  <div class="metric">
+    <h3>Value after <span id="yrLabel">0</span> Years</h3>
+    <div class="value">₹ <span id="future">0</span></div>
+  </div>
+  <div class="metric">
+    <h3>Purchasing Power Lost</h3>
+    <div class="value loss">₹ <span id="loss">0</span> (<span id="lossPct">0</span>%)</div>
+  </div>
+</div>
+
+<!-- CHARTS -->
+<div class="charts">
+  <div class="chart-card">
+    <canvas id="lineChart"></canvas>
+  </div>
+  <div class="chart-card">
+    <canvas id="donutChart"></canvas>
+  </div>
+</div>
+
+</div>
+
+<script>
+let lineChart, donutChart;
+
+function calculate(){
+  const P = Number(amount.value);
+  const r = Number(rate.value)/100;
+  const y = Number(years.value);
+
+  if(!P || !r || !y){
+    alert("Please enter all values");
+    return;
+  }
+
+  // ✅ CORRECT INFLATION LOGIC
+  const future = P / Math.pow(1 + r, y);   // inflation-adjusted value
+  const loss = P - future;                // purchasing power lost
+  const lossPct = (loss / P) * 100;
+
+  futureEl.textContent = Math.round(future).toLocaleString();
+  lossEl.textContent = Math.round(loss).toLocaleString();
+  lossPctEl.textContent = lossPct.toFixed(1);
+  yrLabel.textContent = y;
+
+  /* Line Chart: Declining purchasing power */
+  let values=[];
+  let labels=[];
+  for(let i=0;i<=y;i++){
+    labels.push(i);
+    values.push(P / Math.pow(1 + r, i));
+  }
+
+  if(lineChart) lineChart.destroy();
+  lineChart=new Chart(lineChartEl,{
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        data:values,
+        borderColor:'#38bdf8',
+        tension:.4,
+        fill:false
+      }]
+    },
+    options:{
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,0.05)'}},
+        y:{grid:{color:'rgba(255,255,255,0.05)'}}
+      }
+    }
+  });
+
+  /* Donut Chart: Remaining vs Lost value */
+  if(donutChart) donutChart.destroy();
+  donutChart=new Chart(donutChartEl,{
+    type:'doughnut',
+    data:{
+      datasets:[{
+        data:[future, loss],
+        backgroundColor:['#94a3b8','#f59e0b'],
+        borderWidth:0
+      }]
+    },
+    options:{
+      cutout:'70%',
+      plugins:{legend:{display:false}}
+    }
+  });
+}
+
+const futureEl=document.getElementById('future');
+const lossEl=document.getElementById('loss');
+const lossPctEl=document.getElementById('lossPct');
+const yrLabel=document.getElementById('yrLabel');
+
+const lineChartEl=document.getElementById('lineChart');
+const donutChartEl=document.getElementById('donutChart');
+</script>
+
+</body>
+</html>
